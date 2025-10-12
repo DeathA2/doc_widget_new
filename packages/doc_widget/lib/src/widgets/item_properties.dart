@@ -76,6 +76,9 @@ class ItemProperties extends StatelessWidget {
               )
             ],
           ),
+          TextPreview(
+              text:
+                  'Dependencies: ${documentation.dependencies?.join(",") ?? ""}'),
         ],
       ),
     );

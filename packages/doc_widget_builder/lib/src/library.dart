@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:analyzer/dart/constant/value.dart';
 import 'package:analyzer/dart/element/element.dart';
 import 'package:code_builder/code_builder.dart';
@@ -5,6 +7,7 @@ import 'package:dart_style/dart_style.dart';
 import 'package:doc_widget_builder/src/utils/regex.dart';
 import 'package:doc_widget_builder/src/utils/types.dart';
 import 'package:source_gen/source_gen.dart';
+import 'package:yaml/yaml.dart';
 
 String generateLibrary(ClassElement element) {
   final name = element.name;
@@ -14,6 +17,8 @@ String generateLibrary(ClassElement element) {
       removeDocumentationComment(element.documentationComment ?? '') ?? '');
   final emitter = DartEmitter();
   final dartFormatter = DartFormatter();
+
+  final dependencies = _getThirdPartyDependencies(element);
 
   final getSnippetMethod = Method(
     (m) => m
@@ -65,6 +70,16 @@ String generateLibrary(ClassElement element) {
       ..name = 'properties',
   );
 
+  final getDependenciesMethod = Method(
+    (m) => m
+      ..type = MethodType.getter
+      ..returns = refer('List<String>')
+      ..lambda = true
+      ..annotations.add(refer('override'))
+      ..body = Code('[${dependencies.map((e) => "'$e'").join(', ')}]')
+      ..name = 'dependencies',
+  );
+
   final classDoc = Class(
     (c) => c
       ..name = '${name}DocWidget'
@@ -74,7 +89,8 @@ String generateLibrary(ClassElement element) {
         getHasStateMethod,
         getDeprecationMethod,
         getPropertiesMethod,
-        getSnippetMethod
+        getSnippetMethod,
+        getDependenciesMethod,
       ]),
   );
 
@@ -177,11 +193,6 @@ String _getParametersString(ClassElement element) {
   final parametersBuffer = StringBuffer();
   for (final param in parameters) {
     _generateParametersRequired(parametersBuffer, param);
-    // if (getDescription(param.name, element.fields) != null) {
-    //   parametersBuffer.write(
-    //     "description: '${getDescription(param.name, element.fields)}',",
-    //   );
-    // }
 
     if (getDescription(param.name, element.fields) != null) {
       final desc = getDescription(param.name, element.fields)!
@@ -209,4 +220,61 @@ String? getDescription(String name, List<FieldElement> fields) {
           : null;
   }
   return null;
+}
+
+// List<String> _getThirdPartyDependencies(ClassElement element) {
+//   final imports = element.library.libraryImports
+//       .map((e) => e.importedLibrary?.identifier ?? '')
+//       .where((uri) => uri.startsWith('package:'))
+//       .where((uri) => !uri.startsWith('package:flutter/'))
+//       .where((uri) => !uri.startsWith('package:flutter_test/'))
+//       .where((uri) => !uri.startsWith('package:flutter_web_plugins/'))
+//       .toList();
+//   final packages = imports.map((uri) {
+//     final match = RegExp(r'package:([^/]+)/').firstMatch(uri);
+//     return match?.group(1);
+//   }).whereType<String>().toSet().toList();
+//   return packages;
+// }
+
+List<String> _getThirdPartyDependencies(ClassElement element) {
+  final imports = element.library.libraryImports
+      .map((e) => e.importedLibrary?.identifier ?? '')
+      .where((uri) => uri.startsWith('package:'))
+      .where((uri) => !uri.startsWith('package:flutter/'))
+      .where((uri) => !uri.startsWith('package:flutter_test/'))
+      .where((uri) => !uri.startsWith('package:flutter_web_plugins/'))
+      .toList();
+
+  final packages = imports
+      .map((uri) {
+        final match = RegExp(r'package:([^/]+)/').firstMatch(uri);
+        return match?.group(1);
+      })
+      .whereType<String>()
+      .toSet()
+      .toList();
+
+  final versions = _readPackageVersions();
+
+  return packages.map((pkg) {
+    final ver = versions[pkg];
+    return ver != null ? '$pkg ($ver)' : pkg;
+  }).toList();
+}
+
+Map<String, String> _readPackageVersions() {
+  final lockFile = File('pubspec.lock');
+  if (!lockFile.existsSync()) return {};
+  final content = loadYaml(lockFile.readAsStringSync()) as YamlMap;
+  final pkgs = <String, String>{};
+
+  if (content['packages'] is YamlMap) {
+    (content['packages'] as YamlMap).forEach((key, value) {
+      if (value is YamlMap && value['version'] != null) {
+        pkgs[key.toString()] = value['version'].toString();
+      }
+    });
+  }
+  return pkgs;
 }

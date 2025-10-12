@@ -42,4 +42,6 @@ class ButtonDocWidget implements Documentation {
   onPressed: () => print('Doc Widget'),
 );
 ''';
+  @override
+  List<String> get dependencies => ['doc_widget_annotation (0.2.8)'];
 }

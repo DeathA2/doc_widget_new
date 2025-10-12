@@ -6,6 +6,7 @@ abstract class Documentation {
   String? get deprecation;
   bool get hasState;
   String get snippet;
+  List<String>? get dependencies;
 }
 
 class PropertyDoc {
