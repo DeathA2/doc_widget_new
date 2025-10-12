@@ -15,17 +15,22 @@ class ItemProperties extends StatelessWidget {
         child: Text(name, style: TextDS.bodySmallBold()),
       );
 
-  Widget _builderItem(String name) => Padding(
+  Widget _builderItem({String? name, bool? isActive}) => Padding(
         padding: const EdgeInsets.all(Spacing.x4),
-        child: Text(name, style: TextDS.codeSmall),
+        child: name != null
+            ? Text(name, style: TextDS.codeSmall)
+            : IgnorePointer(
+                child: Checkbox(value: isActive, onChanged: (val) {}),
+              ),
       );
 
   @override
   Widget build(BuildContext context) {
     const borderRadius = BorderRadius.all(Radius.circular(Spacing.x2));
-
+    double screenWidth = MediaQuery.of(context).size.width;
+    List<int> tabFlex = [1, 2, 2, 2, 5];
     return Container(
-      width: MediaQuery.of(context).size.width,
+      width: screenWidth,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -36,6 +41,10 @@ class ItemProperties extends StatelessWidget {
               color: ColorsDoc.border,
               borderRadius: borderRadius,
             ),
+            columnWidths: tabFlex
+                .map((flexValue) => FlexColumnWidth(flexValue.toDouble()))
+                .toList()
+                .asMap(),
             children: [
               TableRow(
                 decoration: const BoxDecoration(
@@ -43,10 +52,11 @@ class ItemProperties extends StatelessWidget {
                   borderRadius: borderRadius,
                 ),
                 children: [
+                  _builderHeader('Required'),
                   _builderHeader('Name'),
                   _builderHeader('Type'),
-                  _builderHeader('Required'),
                   _builderHeader('Default'),
+                  _builderHeader('Description'),
                 ],
               ),
               ...List.generate(
@@ -55,10 +65,11 @@ class ItemProperties extends StatelessWidget {
                   final property = documentation.properties[index];
                   return TableRow(
                     children: [
-                      _builderItem(property.isNamed ? property.name : '-'),
-                      _builderItem(property.type),
-                      _builderItem(property.isRequired.toString()),
-                      _builderItem(property.defaultValue ?? '-'),
+                      _builderItem(isActive: property.isRequired),
+                      _builderItem(name: property.name),
+                      _builderItem(name: property.type),
+                      _builderItem(name: property.defaultValue ?? '-'),
+                      _builderItem(name: property.description ?? '-'),
                     ],
                   );
                 },

@@ -177,10 +177,18 @@ String _getParametersString(ClassElement element) {
   final parametersBuffer = StringBuffer();
   for (final param in parameters) {
     _generateParametersRequired(parametersBuffer, param);
+    // if (getDescription(param.name, element.fields) != null) {
+    //   parametersBuffer.write(
+    //     "description: '${getDescription(param.name, element.fields)}',",
+    //   );
+    // }
+
     if (getDescription(param.name, element.fields) != null) {
-      parametersBuffer.write(
-        "description: '${getDescription(param.name, element.fields)}',",
-      );
+      final desc = getDescription(param.name, element.fields)!
+          .replaceAll("'", "\\'")
+          .replaceAll('\n', '\\n')
+          .replaceAll('\r', '');
+      parametersBuffer.write("description: '$desc',");
     }
     if (param.defaultValueCode != null) {
       parametersBuffer.write('defaultValue: ${getDefaultValue(param)},');
