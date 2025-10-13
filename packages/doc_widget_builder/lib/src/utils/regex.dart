@@ -9,3 +9,8 @@ String getSnippet(String element) {
   final match = regex.firstMatch(stringWithoutDoubleQuotes);
   return match?.group(1)?.trim() ?? '';
 }
+
+String? getPackage(String uri) {
+  final match = RegExp(r'package:([^/]+)/').firstMatch(uri);
+  return match?.group(1);
+}

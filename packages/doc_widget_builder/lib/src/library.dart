@@ -222,21 +222,6 @@ String? getDescription(String name, List<FieldElement> fields) {
   return null;
 }
 
-// List<String> _getThirdPartyDependencies(ClassElement element) {
-//   final imports = element.library.libraryImports
-//       .map((e) => e.importedLibrary?.identifier ?? '')
-//       .where((uri) => uri.startsWith('package:'))
-//       .where((uri) => !uri.startsWith('package:flutter/'))
-//       .where((uri) => !uri.startsWith('package:flutter_test/'))
-//       .where((uri) => !uri.startsWith('package:flutter_web_plugins/'))
-//       .toList();
-//   final packages = imports.map((uri) {
-//     final match = RegExp(r'package:([^/]+)/').firstMatch(uri);
-//     return match?.group(1);
-//   }).whereType<String>().toSet().toList();
-//   return packages;
-// }
-
 List<String> _getThirdPartyDependencies(ClassElement element) {
   final imports = element.library.libraryImports
       .map((e) => e.importedLibrary?.identifier ?? '')
@@ -246,34 +231,65 @@ List<String> _getThirdPartyDependencies(ClassElement element) {
       .where((uri) => !uri.startsWith('package:flutter_web_plugins/'))
       .toList();
 
-  final packages = imports
-      .map((uri) {
-        final match = RegExp(r'package:([^/]+)/').firstMatch(uri);
-        return match?.group(1);
-      })
-      .whereType<String>()
-      .toSet()
-      .toList();
+  final packages = imports.map(getPackage).whereType<String>().toSet().toList();
 
   final versions = _readPackageVersions();
 
-  return packages.map((pkg) {
-    final ver = versions[pkg];
-    return ver != null ? '$pkg ($ver)' : pkg;
+  return packages.where(versions.containsKey).map((pkg) {
+    final info = versions[pkg]!;
+    final prefix = info['type'];
+    final version = info['version'];
+    final url = info['url'];
+    final path = info['path'];
+    final ref = info['ref'];
+
+    if (url != null || path != null || ref != null) {
+      final details = [
+        if (url != null) 'url: $url',
+        if (path != null) 'path: $path',
+        if (ref != null) 'ref: $ref',
+      ].join(', ');
+      return '$prefix:$pkg: ($details)';
+    } else {
+      return '$prefix:$pkg: $version';
+    }
   }).toList();
 }
 
-Map<String, String> _readPackageVersions() {
+Map<String, Map<String, String?>> _readPackageVersions() {
   final lockFile = File('pubspec.lock');
-  if (!lockFile.existsSync()) return {};
-  final content = loadYaml(lockFile.readAsStringSync()) as YamlMap;
-  final pkgs = <String, String>{};
+  final yamlFile = File('pubspec.yaml');
+  if (!lockFile.existsSync() || !yamlFile.existsSync()) return {};
+  final lock = loadYaml(lockFile.readAsStringSync()) as YamlMap;
+  final yaml = loadYaml(yamlFile.readAsStringSync()) as YamlMap;
+  final pkgs = <String, Map<String, String?>>{};
+  final deps =
+      (yaml['dependencies'] as YamlMap?)?.keys.cast<String>().toSet() ?? {};
+  final devDeps =
+      (yaml['dev_dependencies'] as YamlMap?)?.keys.cast<String>().toSet() ?? {};
 
-  if (content['packages'] is YamlMap) {
-    (content['packages'] as YamlMap).forEach((key, value) {
-      if (value is YamlMap && value['version'] != null) {
-        pkgs[key.toString()] = value['version'].toString();
+  if (lock['packages'] is YamlMap) {
+    (lock['packages'] as YamlMap).forEach((key, value) {
+      if (value is! YamlMap) return;
+      final source = value['source']?.toString();
+      if (source == 'sdk') return;
+      if (!(deps.contains(key) || devDeps.contains(key))) return;
+      final type = deps.contains(key) ? 'dep' : 'dev';
+      final version = value['version']?.toString();
+      final desc = value['description'];
+      String? url, path, ref;
+      if (desc is YamlMap) {
+        url = desc['url']?.toString();
+        path = desc['path']?.toString();
+        ref = desc['ref']?.toString();
       }
+      pkgs[key] = {
+        'type': type,
+        'version': version,
+        'url': url,
+        'path': path,
+        'ref': ref,
+      };
     });
   }
   return pkgs;

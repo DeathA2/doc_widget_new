@@ -38,5 +38,5 @@ final headingTitle = Heading(title: 'Title');
 final headingWithSubtitle = Heading(title: 'Title', subtitle: 'Subtitle');
 ''';
   @override
-  List<String> get dependencies => ['doc_widget_annotation (0.2.8)'];
+  List<String> get dependencies => [];
 }
