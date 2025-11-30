@@ -237,13 +237,16 @@ List<String> _getThirdPartyDependencies(ClassElement element) {
 
   return packages.where(versions.containsKey).map((pkg) {
     final info = versions[pkg]!;
-    final prefix = info['type'];
+    final prefix = info['type']!;
     final version = info['version'];
     final url = info['url'];
     final path = info['path'];
     final ref = info['ref'];
 
-    if (url != null || path != null || ref != null) {
+    // Hosted package: only show version
+    final isSpecial = (url != null || path != null || ref != null);
+
+    if (isSpecial) {
       final details = [
         if (url != null) 'url: $url',
         if (path != null) 'path: $path',
@@ -277,11 +280,20 @@ Map<String, Map<String, String?>> _readPackageVersions() {
       final type = deps.contains(key) ? 'dep' : 'dev';
       final version = value['version']?.toString();
       final desc = value['description'];
-      String? url, path, ref;
+
+      String? url;
+      String? path;
+      String? ref;
+
+      // FIXED: only read url/path/ref for git or path
       if (desc is YamlMap) {
-        url = desc['url']?.toString();
-        path = desc['path']?.toString();
-        ref = desc['ref']?.toString();
+        if (source == 'git') {
+          url = desc['url']?.toString();
+          path = desc['path']?.toString();
+          ref = desc['ref']?.toString();
+        } else if (source == 'path') {
+          path = desc['path']?.toString();
+        }
       }
       pkgs[key] = {
         'type': type,
