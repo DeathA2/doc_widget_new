@@ -333,7 +333,7 @@ String _getSourceCode(
 
 String _escapeForTripleQuote(String input) {
   return input
-      .replaceAll("'''", "\\'\\'\\'")
-      .replaceAll('\$', '\\\$')
-      .replaceAll('\\', '\\\\');
+      .replaceAll(r'\', r'\\')
+      .replaceAll(r'$', r'\$')
+      .replaceAll("'''", r"\'\'\'");
 }
