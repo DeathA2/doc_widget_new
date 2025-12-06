@@ -7,6 +7,7 @@ abstract class Documentation {
   bool get hasState;
   String get snippet;
   List<String>? get dependencies;
+  String? get source;
 }
 
 class PropertyDoc {
@@ -17,6 +18,7 @@ class PropertyDoc {
     required this.isNamed,
     this.description,
     this.defaultValue,
+    this.source,
   });
 
   final String name;
@@ -25,6 +27,7 @@ class PropertyDoc {
   final bool isNamed;
   final String? description;
   final String? defaultValue;
+  final String? source;
 }
 
 class ElementPreview {

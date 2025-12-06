@@ -13,7 +13,7 @@ class DocWidgetGenerator extends GeneratorForAnnotation<DocWidget> {
     BuildStep buildStep,
   ) {
     if (element is ClassElement && isWidget(element.allSupertypes)) {
-      return generateLibrary(element);
+      return generateLibrary(element, buildStep);
     } else {
       throw InvalidGenerationSourceError(
         'Error, the decorated element is not a Widget',

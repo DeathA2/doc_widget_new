@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:analyzer/dart/constant/value.dart';
 import 'package:analyzer/dart/element/element.dart';
+import 'package:build/build.dart';
 import 'package:code_builder/code_builder.dart';
 import 'package:dart_style/dart_style.dart';
 import 'package:doc_widget_builder/src/utils/regex.dart';
@@ -9,7 +10,7 @@ import 'package:doc_widget_builder/src/utils/types.dart';
 import 'package:source_gen/source_gen.dart';
 import 'package:yaml/yaml.dart';
 
-String generateLibrary(ClassElement element) {
+String generateLibrary(ClassElement element, BuildStep buildStep) {
   final name = element.name;
   final hasState = hasType(element.allSupertypes, 'StatefulWidget');
   final deprecation = getDeprecationMessage(element);
@@ -17,6 +18,7 @@ String generateLibrary(ClassElement element) {
       removeDocumentationComment(element.documentationComment ?? '') ?? '');
   final emitter = DartEmitter();
   final dartFormatter = DartFormatter();
+  final source = _getSourceCode(element, buildStep);
 
   final dependencies = _getThirdPartyDependencies(element);
 
@@ -80,6 +82,16 @@ String generateLibrary(ClassElement element) {
       ..name = 'dependencies',
   );
 
+  final getSourceMethod = Method(
+    (m) => m
+      ..type = MethodType.getter
+      ..returns = refer('String')
+      ..lambda = true
+      ..annotations.add(refer('override'))
+      ..body = Code("'''${_escapeForTripleQuote(source)}'''")
+      ..name = 'source',
+  );
+
   final classDoc = Class(
     (c) => c
       ..name = '${name}DocWidget'
@@ -91,6 +103,7 @@ String generateLibrary(ClassElement element) {
         getPropertiesMethod,
         getSnippetMethod,
         getDependenciesMethod,
+        getSourceMethod,
       ]),
   );
 
@@ -305,4 +318,22 @@ Map<String, Map<String, String?>> _readPackageVersions() {
     });
   }
   return pkgs;
+}
+
+String _getSourceCode(
+  ClassElement element,
+  BuildStep buildStep,
+) {
+  try {
+    return element.source.contents.data;
+  } catch (e) {
+    return '';
+  }
+}
+
+String _escapeForTripleQuote(String input) {
+  return input
+      .replaceAll("'''", "\\'\\'\\'")
+      .replaceAll('\$', '\\\$')
+      .replaceAll('\\', '\\\\');
 }
