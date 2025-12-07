@@ -3,7 +3,7 @@ import 'package:doc_widget/src/styles/colors.dart';
 import 'package:doc_widget/src/styles/spaces.dart';
 import 'package:doc_widget/src/utils/platform.dart';
 import 'package:doc_widget/src/widgets/app_bar.dart';
-import 'package:doc_widget/src/widgets/drawer.dart';
+import 'package:doc_widget/src/widgets/drawer_with_search.dart';
 import 'package:doc_widget/src/widgets/item.dart';
 import 'package:flutter/material.dart';
 
